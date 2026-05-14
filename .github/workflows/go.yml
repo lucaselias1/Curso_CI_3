@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest # Simplificado para evitar imagens obsoletas
+    runs-on: ubuntu-latest
     env:
       HOST: localhost
       DBPORT: 5432
@@ -17,7 +17,7 @@ jobs:
       DBNAME: root
     strategy:
       matrix:
-        go_version: ['1.18', '1.19'] # Versões estáveis
+        go_version: ['1.18', '1.19']
 
     steps:
     - uses: actions/checkout@v3
@@ -28,12 +28,10 @@ jobs:
         go-version: ${{ matrix.go_version }}
       
     - name: Build and Start DB
-      # Usar -d garante que o banco fique rodando em background
       run: docker compose up -d
 
     - name: Wait for DB to be ready
-      # Pequeno delay para garantir que o Postgres terminou de iniciar
-      run: sleep 10
+      run: sleep 15 # Aumentei para 15s para ser mais seguro
 
     - name: Test
       run: go test -v main_test.go 
@@ -50,7 +48,6 @@ jobs:
         go-version: '1.18'
 
     - name: Build
-      # Garante que o binário gerado tenha o nome 'main' para o artefato
       run: go build -v -o main main.go
       
     - name: Upload a Build Artifact
@@ -59,14 +56,14 @@ jobs:
         name: programa
         path: main
 
-  # Job para gerar a imagem Docker
   docker_build:
     needs: build
-    uses: ./.github/workflows/Docker.yml
+    # Certifique-se de que o nome do arquivo no diretório é exatamente Docker.yml
+    uses: ./.github/workflows/docker.yml 
     secrets: inherit
 
-  # Job de Deploy (Agora depende do sucesso do Docker)
   deploy_ec2:
     needs: docker_build
-    uses: ./.github/workflows/EC2.yml # Supondo que você tenha um para EC2
+    # Certifique-se de que o nome do arquivo no diretório é exatamente EC2.yml
+    uses: ./.github/workflows/EC2.yml 
     secrets: inherit

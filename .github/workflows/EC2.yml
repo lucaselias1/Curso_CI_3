@@ -24,7 +24,7 @@ jobs:
           TARGET: ${{ secrets.REMOTE_TARGET }}
           EXCLUDE: "postgres-data"
 
-      - name: Execute remote SSH commands using password
+      - name: Execute remote SSH commands
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.REMOTE_HOST }}
@@ -32,6 +32,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            # Mata o processo antigo para evitar conflito de porta
+            sudo fuser -k 8000/tcp || true
             export HOST=${{ secrets.DBHOST }}
             export USER=${{ secrets.DBUSER }}
             export PASSWORD=${{ secrets.DBPASSWORD }}
@@ -39,6 +41,5 @@ jobs:
             export DBPORT=${{ secrets.DBPORT }}
             export PORT=8000
             chmod +x main
-            nohup ./main &
-            
-            
+            # Roda em background e limpa logs antigos
+            nohup ./main > out.log 2>&1 &

@@ -20,50 +20,53 @@ jobs:
         go_version: ['1.18', '1.19']
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: ${{ matrix.go_version }}
-      
-    - name: Build and Start DB
-      run: docker compose up -d
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go_version }}
+        
+      - name: Build and Start DB
+        run: docker compose up -d
 
-    - name: Wait for DB to be ready
-      run: sleep 15 # Aumentei para 15s para ser mais seguro
+      - name: Wait for DB (Verificação Ativa)
+        # Este comando tenta conectar na porta até ela responder ou dar timeout
+        run: |
+          timeout 60s bash -c 'until printf "" 2>>/dev/null >>/dev/tcp/$0/$1; do sleep 2; done' localhost 5432
+          echo "Postgres está online!"
 
-    - name: Test
-      run: go test -v main_test.go 
-      
+      - name: Test
+        run: go test -v main_test.go
+
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.18'
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
 
-    - name: Build
-      run: go build -v -o main main.go
-      
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: programa
-        path: main
+      - name: Build
+        run: go build -v -o main main.go
+        
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: programa
+          path: main
 
   docker_build:
     needs: build
-    # Certifique-se de que o nome do arquivo no diretório é exatamente Docker.yml
+    # Certifique-se de que o nome do arquivo no diretório é exatamente Docker.yml (case-sensitive no Linux)
     uses: ./.github/workflows/docker.yml 
     secrets: inherit
 
   deploy_ec2:
     needs: docker_build
-    # Certifique-se de que o nome do arquivo no diretório é exatamente EC2.yml
+    # Certifique-se de que o nome do arquivo no diretório é exatamente EC2.yml (case-sensitive no Linux)
     uses: ./.github/workflows/EC2.yml 
     secrets: inherit
